@@ -49,7 +49,7 @@ int main()
 	// create particle
 	Mesh particle1 = Mesh::Mesh();
 	//scale it down (x.1), translate it up by 2.5 and rotate it by 90 degrees around the x axis
-	particle1.translate(glm::vec3(0.0f, 2.5f, 0.0f));
+	particle1.translate(glm::vec3(0.0f, 5.0f, 0.0f));
 	particle1.scale(glm::vec3(.1f, .1f, .1f));
 	particle1.rotate((GLfloat) M_PI_2, glm::vec3(1.0f, 0.0f, 0.0f));
 	particle1.setShader(Shader("resources/shaders/core.vert", "resources/shaders/core_blue.frag"));
@@ -57,6 +57,9 @@ int main()
 	// time
 	GLfloat firstFrame = (GLfloat) glfwGetTime();
 	
+
+	glm::vec3 velocity;
+	velocity = glm::vec3(0, 0, 0);
 	// Game loop
 	while (!glfwWindowShouldClose(app.getWindow()))
 	{
@@ -77,8 +80,26 @@ int main()
 		/*
 		**	SIMULATION
 		*/
+		glm::vec3 force ;
+		glm::vec3 acc = glm::vec3(0, -9.8, 0);
+		float mass = 5;
+		force = acc * mass;
 		
-				
+		velocity += acc * deltaTime;
+
+		if (particle1.getTranslate()[3][1] < plane.getTranslate()[3][1])
+		{
+			particle1.setPos(1, plane.getTranslate()[3][1]);
+
+			velocity[1] *= -0.7f;
+
+			if (velocity.y < 0.1)
+				particle1.setPos(1, 0.0f);
+
+		}
+		
+		
+		particle1.translate(velocity * deltaTime);
 
 		/*
 		**	RENDER 
