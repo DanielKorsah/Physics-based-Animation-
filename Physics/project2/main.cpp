@@ -23,6 +23,8 @@
 #include "Application.h"
 #include "Shader.h"
 #include "Mesh.h"
+#include "Particle.h"
+#include "Body.h"
 
 
 // time
@@ -47,59 +49,85 @@ int main()
 
 
 	// create particle
-	Mesh particle1 = Mesh::Mesh();
-	//scale it down (x.1), translate it up by 2.5 and rotate it by 90 degrees around the x axis
-	particle1.translate(glm::vec3(0.0f, 5.0f, 0.0f));
-	particle1.scale(glm::vec3(.1f, .1f, .1f));
-	particle1.rotate((GLfloat) M_PI_2, glm::vec3(1.0f, 0.0f, 0.0f));
-	particle1.setShader(Shader("resources/shaders/core.vert", "resources/shaders/core_blue.frag"));
+	std::vector<Particle> particles;
+	int particleNum = 10;
+	for (int i = 0; i < particleNum; i++) 
+	{
+		Particle p = Particle::Particle();
+		particles.push_back(p);
+		//scale it down (x.1), translate it up by 2.5 and rotate it by 90 degrees around the x axis
+		particles[i].translate(glm::vec3(0.0f, 5.0f, 0.0f));
+		particles[i].scale(glm::vec3(0.5f, 0.5f, 0.5f));
+		particles[i].rotate((GLfloat) M_PI_2, glm::vec3(0.0f, 1.0f, 0.0f));
+		particles[i].getMesh().setShader(Shader("resources/shaders/core.vert", "resources/shaders/core_blue.frag"));
+		
+	}
 
 	// time
 	GLfloat firstFrame = (GLfloat) glfwGetTime();
 	
 
 	glm::vec3 velocity;
-	velocity = glm::vec3(0, 0, 0);
+	velocity = glm::vec3(1, 0, 0.8f);
+
+	struct Cube 
+	{
+		glm::vec3 origin = glm::vec3(-2.5f, 0.0f, -2.5f);
+		glm::vec3 bound = glm::vec3(2.5f, 5.0f, 2.5f);
+	};
+
+	Cube cube;
+
 	// Game loop
 	while (!glfwWindowShouldClose(app.getWindow()))
 	{
-		// Set frame time
-		GLfloat currentFrame = (GLfloat)  glfwGetTime() - firstFrame;
-		// the animation can be sped up or slowed down by multiplying currentFrame by a factor.
-		currentFrame *= 1.5f;
-		deltaTime = currentFrame - lastFrame;
-		lastFrame = currentFrame;
-
-		/*
-		**	INTERACTION
-		*/
-		// Manage interaction
-		app.doMovement(deltaTime);
-
-
-		/*
-		**	SIMULATION
-		*/
-		glm::vec3 force ;
-		glm::vec3 acc = glm::vec3(0, -9.8, 0);
-		float mass = 5;
-		force = acc * mass;
-		
-		velocity += acc * deltaTime;
-
-		if (particle1.getTranslate()[3][1] < plane.getTranslate()[3][1])
+		for(int i = 0; i < particleNum; i++)
 		{
-			particle1.setPos(1, plane.getTranslate()[3][1]);
+			// Set frame time
+			GLfloat currentFrame = (GLfloat)glfwGetTime() - firstFrame;
+			// the animation can be sped up or slowed down by multiplying currentFrame by a factor.
+			currentFrame *= 1.5f;
+			deltaTime = currentFrame - lastFrame;
+			lastFrame = currentFrame;
 
-			velocity[1] *= -0.7f;
+			/*
+			**	INTERACTION
+			*/
+			// Manage interaction
+			app.doMovement(deltaTime);
 
-			if (velocity.y < 0.1)
-				particle1.setPos(1, 0.0f);
 
+			/*
+			**	SIMULATION
+			*/
+			glm::vec3 Fg;
+			glm::vec3 gravity = glm::vec3(0, -9.8, 0);
+			float mass = 5;
+			Fg = gravity * mass;
+
+			//set acceleration
+			//particles[i].setAcc(gravity * deltaTime);
+			glm::vec3 acceleration = (gravity * deltaTime);
+			velocity += acceleration;
+
+			for (int i = 0; i < 3; i++)
+			{
+				if (particles[i].getTranslate()[3][i] < cube.origin[i])
+				{
+					particles[i].setPos(i, cube.origin[i]);
+					velocity[i] *= -0.7f;
+				}
+
+				if (particles[i].getTranslate()[3][i] > cube.bound[i])
+				{
+					particles[i].setPos(i, cube.bound[i]);
+					velocity[i] *= -0.7f;
+				}
+			}
+
+			//update the particle instance using translate and passing the velocity vector
+			particles[i].translate(velocity * deltaTime);
 		}
-		
-		
-		particle1.translate(velocity * deltaTime);
 
 		/*
 		**	RENDER 
@@ -109,7 +137,10 @@ int main()
 		// draw groud plane
 		app.draw(plane);
 		// draw particles
-		app.draw(particle1);				
+		for(int i = 0; i < particleNum; i++)
+		{
+			app.draw(particles[i].getMesh());
+		}			
 
 		app.display();
 	}

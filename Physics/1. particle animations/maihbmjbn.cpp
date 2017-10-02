@@ -120,13 +120,13 @@ void MouseCallback(GLFWwindow *window, double xPos, double yPos)
 	lastX = xPos;
 	lastY = yPos;
 
-	camera.ProcessMouseMovement((GLfloat) xOffset, (GLfloat) yOffset);
+	camera.ProcessMouseMovement(xOffset, yOffset);
 }
 
 
 void ScrollCallback(GLFWwindow *window, double xOffset, double yOffset)
 {
-	camera.ProcessMouseScroll((GLfloat)yOffset);
+	camera.ProcessMouseScroll(yOffset);
 }
 
 
@@ -183,17 +183,19 @@ int initRender() {
 }
 
 // draw mesh
-void draw(const Mesh &mesh)
+void draw(Mesh mesh)
 {
-	mesh.getShader().Use();
+	glm::mat4 model = mesh.getTranslate()* mesh.getRotate() * mesh.getScale();
+	Shader shader = mesh.getShader();
+	shader.Use();
 
 	// Get the uniform locations
-	GLint modelLoc = glGetUniformLocation(mesh.getShader().Program, "model");
-	GLint viewLoc = glGetUniformLocation(mesh.getShader().Program, "view");
-	GLint projLoc = glGetUniformLocation(mesh.getShader().Program, "projection");
+	GLint modelLoc = glGetUniformLocation(shader.Program, "model");
+	GLint viewLoc = glGetUniformLocation(shader.Program, "view");
+	GLint projLoc = glGetUniformLocation(shader.Program, "projection");
 
 	// Pass the matrices to the shader
-	glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(mesh.getModel()));
+	glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
 	glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(view));
 	glUniformMatrix4fv(projLoc, 1, GL_FALSE, glm::value_ptr(projection));
 
@@ -208,58 +210,64 @@ void draw(const Mesh &mesh)
 int main()
 {
 	// init renderer
-	initRender();
-
+	initRender();	
+			
 	// create ground plane
 	Mesh plane = Mesh::Mesh();
 	// scale it up x5
-	plane.scale(glm::vec3(5.0f, 5.0f, 5.0f));
+	plane.scale(glm::vec3(500.0f, 500.0f, 500.0f));
 
-	// create particle
+	// create particles
 	Mesh particle1 = Mesh::Mesh();
 	//scale it down (x.1), translate it up by 2.5 and rotate it by 90 degrees around the x axis
-	//particle1.translate(glm::vec3(0.0f, 2.5f, 0.0f));
-	particle1.setPos(glm::vec3(0, 5, 0));
+	particle1.translate(glm::vec3(0.0f, 2.5f, 0.0f));
 	particle1.scale(glm::vec3(.1f, .1f, .1f));
-	particle1.rotate((GLfloat)M_PI_2, glm::vec3(1.0f, 0.0f, 0.0f));
-	// allocate shader
+	particle1.rotate(M_PI_2, glm::vec3(1.0f, 0.0f, 0.0f));
 	particle1.setShader(Shader("resources/shaders/core.vert", "resources/shaders/core_blue.frag"));
 
-	/*
-	CREATE THE PARTICLE(S) YOU NEED TO COMPLETE THE TASKS HERE
-	*/
-
-	// create particle
 	Mesh particle2 = Mesh::Mesh();
-	//scale it down (x.1), translate it up by 2.5 and rotate it by 90 degrees around the x axis
-	particle2.translate(glm::vec3(0.0f, 2.5f, 0.0f));
 	particle2.scale(glm::vec3(.1f, .1f, .1f));
-	particle2.rotate((GLfloat)M_PI_2, glm::vec3(1.0f, 0.0f, 0.0f));
-	// allocate shader
-	particle2.setShader(Shader("resources/shaders/core.vert", "resources/shaders/core_red.frag"));
+	particle2.rotate(M_PI_2, glm::vec3(1.0f, 0.0f, 0.0f));
+	particle2.setShader(Shader("resources/shaders/core.vert", "resources/shaders/core_green.frag"));
+	glm::vec3 p0 = glm::vec3(0.0f, 5.0f, 0.0f);
+	glm::vec3 v0 = glm::vec3(0.0f, 0.0f, 0.0f);
+	glm::vec3 a = glm::vec3(0.0f, -9.8f, 0.0f);
 
-	Mesh particle3 = Mesh::Mesh();
-	//scale it down (x.1), translate it up by 2.5 and rotate it by 90 degrees around the x axis
-	particle3.translate(glm::vec3(0.0f, 2.5f, 0.0f));
-	particle3.scale(glm::vec3(.1f, .1f, .1f));
-	particle3.rotate((GLfloat)M_PI_2, glm::vec3(1.0f, 0.0f, 0.0f));
-	// allocate shader
-	particle3.setShader(Shader("resources/shaders/core.vert", "resources/shaders/core_green.frag"));
+	// collection of particles
+	const int particleNum = 101;
+	Mesh particles[particleNum];
+	// positions and velocities (acceleration identicle for all particles
+	glm::vec3 positions[particleNum];
+	glm::vec3 velocities[particleNum];
+	// timing for each particle to manage collision with floor
+	float firstFrames[particleNum];
+	float currentFrames[particleNum];
+	srand((unsigned)time(NULL));
+	Shader particleShader = Shader("resources/shaders/core.vert", "resources/shaders/core_green.frag");
+	for (int i = 0; i < particleNum; i++) {
+		particles[i] = Mesh::Mesh();
+		particles[i].scale(glm::vec3(.1f, .1f, .1f));
+		particles[i].rotate(M_PI_2, glm::vec3(1.0f, 0.0f, 0.0f));
+		particles[i].setShader(particleShader);
+		positions[i] = glm::vec3(0.0f, 5.0f, 0.0f);
+		// generate 3 random numbers to vary velocities
+		float angle =  2.0 * M_PI * (float) rand()/RAND_MAX;
+		float vx = 1.0f - 2.0f * cos(angle) * (float)rand() / RAND_MAX;
+		float vy = 7.0f - 10.0f *(float)rand() / RAND_MAX;
+		float vz = 1.0f - 2.0f * sin(angle) * (float)rand() / RAND_MAX;
+		velocities[i]= glm::vec3(vx, vy, vz);
+		GLfloat ff = glfwGetTime();
+		firstFrames[i] = ff;
+	}
 
 
-	GLfloat firstFrame = (GLfloat) glfwGetTime();
-	glm::vec3 velocity = glm::vec3(0, 0, 0);
-	glm::vec3 acc = glm::vec3(0, 1, 0);
-	float u = 0.5;
-	velocity.x = u;
-
-
+	GLfloat firstFrame = glfwGetTime();
+	
 	// Game loop
 	while (!glfwWindowShouldClose(window))
 	{
 		// Set frame time
-		GLfloat currentFrame = (GLfloat)  glfwGetTime() - firstFrame;
-		// the animation can be sped up or slowed down by multiplying currentFrame by a factor.
+		GLfloat currentFrame = glfwGetTime() - firstFrame;
 		currentFrame *= 1.5f;
 		deltaTime = currentFrame - lastFrame;
 		lastFrame = currentFrame;
@@ -277,52 +285,59 @@ int main()
 		view = camera.GetViewMatrix();
 
 		/*
-		**	ANIMATIONS
+		**	ANIMATION / SIMULATION
 		*/
-		//acc *=1.1;
-		//particle1.translate(glm::vec3(0.0f, -1.0f * deltaTime * acc, 0.0f));
-
-		// 1 - make particle fall at constant speed using the translate method
-		//particle1.translate(glm::vec3 (0, -0.5, 0) * deltaTime);
-
-		// 2 - same as above using the setPos method
-		//particle1.setPos(glm::vec3(0, -currentFrame, 0) );
-
-		// 3 - make particle oscillate above the ground plance
-		//particle1.setPos(glm::vec3(0, sin(currentFrame * 4) + 1, 0));
-
-		// 4 - particle animation from initial velocity and acceleration
 		
-		
+		// 1 - make particle fall at constant speed using translate method
+		//particle1.translate(glm::vec3(0.0f, -0.5f * deltaTime, 0.0f));
 
-		velocity += acc * deltaTime;
-		
-		particle1.translate(velocity);
+		// 2 - same as above using setPos method
+		//particle2.setPos(glm::vec3(0.0f, .5f - 0.1f * (currentFrame - firstFrame), 0.0f));
 
-		// 5 - add collision with plane
-		if (particle1.getTranslate()[3][1] < plane.getTranslate()[3][1]) 
-		{
-			particle1.setPos(glm::vec3(particle1.getTranslate()[3][0], plane.getTranslate()[3][1], particle1.getTranslate()[3][2]));
-			//acc += ;
+		// 3 - make particle oscillate above teh ground plance
+		//particle2.setPos(glm::vec3(0.0f, 2.5f + 2.5f * sin(currentFrame - firstFrame), 0.0f));
+
+		// 4 - particle trajectory from initial velocity and acceleration
+		//particle2.setPos(p0 + v0 * currentFrame + 0.5f * a * currentFrame * currentFrame);
+
+		// 5 add collision with plane
+		/*if (particle2.getTranslate()[3][1] < 0.0f) {
+			p0 = particle2.getTranslate()[3];
+			p0[1] = 0.0f;
+			v0 = v0 + a * currentFrame;
+			v0[1] = -.5f * v0[1];
+			firstFrame = glfwGetTime();
+		}*/
+
+		// 6 collection of particles
+		for (int i=0; i< particleNum; i++){
+			currentFrames[i] = glfwGetTime() - firstFrames[i];
+			currentFrames[i] *= 2.5f;
+
+			particles[i].setPos(positions[i] + velocities[i] * currentFrames[i] + 0.5f * a * currentFrames[i] * currentFrames[i]);
+			if (particles[i].getTranslate()[3][1] < 0.0f) {
+				positions[i] = particles[i].getTranslate()[3];
+				positions[i][1] = 0.0f;
+				velocities[i] = velocities[i] + a * currentFrames[i];
+				velocities[i][1] = -1.0f * velocities[i][1];
+				firstFrames[i] = glfwGetTime();
+			}
 		}
 
-		// 6 - Same as above but for a collection of particles
-		
-
 		/*
-		**	RENDER 
+		**	RENDER
 		*/
 
 		// Clear the colorbuffer
 		glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-		// draw groud plane
+		// draw objects
 		draw(plane);
-		// draw particles
-		draw(particle1);
 		//draw(particle2);
-		//draw(particle3);
+		for (int i = 0; i < particleNum; i++) {
+			draw(particles[i]);
+		}
 				
 
 		glBindVertexArray(0);
