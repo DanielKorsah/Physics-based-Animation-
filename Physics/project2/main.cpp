@@ -50,14 +50,14 @@ int main()
 
 	// create particle
 	std::vector<Particle> particles;
-	int particleNum = 300;
+	int particleNum = 40;
 	for (int i = 0; i < particleNum; i++)
 	{
 		Particle p = Particle::Particle();
 		particles.push_back(p);
 		//scale it down (x.1), translate it up by 2.5 and rotate it by 90 degrees around the x axis
 		particles[i].setPos(glm::vec3(0.0f, 4.0f, 0.0f));
-		//particles[i].scale(glm::vec3(0.5f, 0.5f, 0.5f));
+		particles[i].scale(glm::vec3(0.5f, 0.5f, 0.5f));
 		//particles[i].rotate((GLfloat) M_PI_2, glm::vec3(0.0f, 1.0f, 0.0f));
 		particles[i].getMesh().setShader(Shader("resources/shaders/core.vert", "resources/shaders/core_blue.frag"));
 
