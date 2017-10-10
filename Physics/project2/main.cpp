@@ -69,6 +69,12 @@ int main()
 	// time
 	GLfloat firstFrame = (GLfloat)glfwGetTime();
 
+	//fixed timestep
+	double physicsTime = 0.0f;
+	const double fixedDeltaTime = 0.01f;
+	double currentTime = (GLfloat)glfwGetTime();
+	double accumulator = 0.0f;
+
 	struct Cube
 	{
 		glm::vec3 origin = glm::vec3(-2.5f, 0.0f, -2.5f);
@@ -81,6 +87,54 @@ int main()
 	// Game loop
 	while (!glfwWindowShouldClose(app.getWindow()))
 	{
+
+		//fixed timstep
+		double newTime = (GLfloat)glfwGetTime();
+		double frameTime = newTime - currentTime;
+		currentTime = newTime;
+
+		accumulator += frameTime;
+
+		while (accumulator >= fixedDeltaTime)
+		{
+			for (int i = 0; i < particleNum; i++)
+			{
+				/*
+				**	SIMULATION
+				*/
+				glm::vec3 Fg;
+				float mass = 5;
+				Fg = gravity * mass;
+
+
+				//set acceleration
+				particles[i].setAcc(gravity);
+				particles[i].setVel(particles[i].getVel() + particles[i].getAcc() * fixedDeltaTime);
+
+				//update the particle instance using translate and passing the velocity vector
+				particles[i].translate(particles[i].getVel() * fixedDeltaTime);
+
+
+				for (int j = 0; j < 3; j++)
+				{
+					if (particles[i].getTranslate()[3][j] < cube.origin[j])
+					{
+						particles[i].setPos(j, cube.origin[j]);
+						particles[i].getVel()[j] *= -0.7f;
+					}
+
+					if (particles[i].getTranslate()[3][j] > cube.bound[j])
+					{
+						particles[i].setPos(j, cube.bound[j]);
+						particles[i].getVel()[j] *= -0.7;
+					}
+				}
+			}
+
+			accumulator -= fixedDeltaTime;
+			physicsTime += fixedDeltaTime;
+		}
+
 		// Set frame time
 		GLfloat currentFrame = (GLfloat)glfwGetTime() - firstFrame;
 		// the animation can be sped up or slowed down by multiplying currentFrame by a factor.
@@ -88,47 +142,12 @@ int main()
 		deltaTime = currentFrame - lastFrame;
 		lastFrame = currentFrame;
 
-		for (int i = 0; i < particleNum; i++)
-		{
+		/*
+		**	INTERACTION
+		*/
+		// Manage interaction
+		app.doMovement(deltaTime);
 
-			/*
-			**	INTERACTION
-			*/
-			// Manage interaction
-			app.doMovement(deltaTime);
-
-
-			/*
-			**	SIMULATION
-			*/
-			glm::vec3 Fg;
-			float mass = 5;
-			Fg = gravity * mass;
-
-
-			//set acceleration
-			particles[i].setAcc(gravity);
-			particles[i].setVel(particles[i].getVel() +particles[i].getAcc() * deltaTime);
-
-			//update the particle instance using translate and passing the velocity vector
-			particles[i].translate(particles[i].getVel() * deltaTime);
-
-
-			for (int j = 0; j < 3; j++)
-			{
-				if (particles[i].getTranslate()[3][j] < cube.origin[j])
-				{
-					particles[i].setPos(j, cube.origin[j]);
-					particles[i].getVel()[j] *= -0.7f;
-				}
-
-				if (particles[i].getTranslate()[3][j] > cube.bound[j])
-				{
-					particles[i].setPos(j, cube.bound[j]);
-					particles[i].getVel()[j] *= -0.7;
-				}
-			}
-		}
 
 		/*
 		**	RENDER
