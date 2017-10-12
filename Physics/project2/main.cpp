@@ -114,7 +114,7 @@ int main()
 				particles[i].setVel(particles[i].getVel() + particles[i].getAcc() * fixedDeltaTime);
 				particles[i].setPos(particles[i].getPos() + particles[i].getVel() * fixedDeltaTime);
 
-
+				//collisions to bound within the box
 				for (int j = 0; j < 3; j++)
 				{
 					if (particles[i].getTranslate()[3][j] < cube.origin[j])
