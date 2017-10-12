@@ -109,10 +109,10 @@ int main()
 
 				//set acceleration
 				particles[i].setAcc(gravity);
-				particles[i].setVel(particles[i].getVel() + particles[i].getAcc() * fixedDeltaTime);
 
-				//update the particle instance using translate and passing the velocity vector
-				particles[i].translate(particles[i].getVel() * fixedDeltaTime);
+				//Semi-Implicit Euler integration
+				particles[i].setVel(particles[i].getVel() + particles[i].getAcc() * fixedDeltaTime);
+				particles[i].setPos(particles[i].getPos() + particles[i].getVel() * fixedDeltaTime);
 
 
 				for (int j = 0; j < 3; j++)
