@@ -56,15 +56,25 @@ int main()
 		Particle p = Particle::Particle();
 		particles.push_back(p);
 		//scale it down (x.1), translate it up by 2.5 and rotate it by 90 degrees around the x axis
-		particles[i].setPos(glm::vec3(0.0f, 4.0f, 0.0f));
+		//particles[i].setPos(glm::vec3(0.0f, 4.0f, 0.0f));
 		particles[i].scale(glm::vec3(0.5f, 0.5f, 0.5f));
 		//particles[i].rotate((GLfloat) M_PI_2, glm::vec3(0.0f, 1.0f, 0.0f));
 		particles[i].getMesh().setShader(Shader("resources/shaders/core.vert", "resources/shaders/core_blue.frag"));
 
 
 		//initial velocty
-		particles[i].setVel(glm::vec3(sin(i), 0.0f, cos(i)));
+		//particles[i].setVel(glm::vec3(sin(i), 0.0f, cos(i)));
+
+		//make ring
+		particles[i].setPos(glm::vec3(sin(i), 3.0f, cos(i)));
 	}
+	
+	//height marker particle
+	Particle m = Particle::Particle();
+	m.setPos(glm::vec3(0, 3, 0));
+	m.scale(glm::vec3(0.5f, 0.5f, 0.5f));
+	m.getMesh().setShader(Shader("resources/shaders/core.vert", "resources/shaders/core_blue.frag"));
+
 
 	// time
 	GLfloat firstFrame = (GLfloat)glfwGetTime();
@@ -102,16 +112,16 @@ int main()
 				/*
 				**	SIMULATION
 				*/
-				glm::vec3 Fg;
+				/*glm::vec3 Fg;
 				float mass = 5;
-				Fg = gravity * mass;
+				Fg = gravity * mass;*/
 
 
 				//set acceleration
 				particles[i].setAcc(gravity);
 
 				//Semi-Implicit Euler integration
-				particles[i].setVel(particles[i].getVel() + particles[i].getAcc() * fixedDeltaTime);
+				particles[i].getVel() += particles[i].getAcc() * fixedDeltaTime;
 				particles[i].setPos(particles[i].getPos() + particles[i].getVel() * fixedDeltaTime);
 
 				//collisions to bound within the box
@@ -119,15 +129,20 @@ int main()
 				{
 					if (particles[i].getTranslate()[3][j] < cube.origin[j])
 					{
-						particles[i].setPos(j, cube.origin[j]);
-						particles[i].getVel()[j] *= -0.7f;
+						glm::vec3 diff = glm::vec3(0.0f);
+						diff[j]= cube.origin[j] - particles[i].getPos()[j];
+						particles[i].setPos(j, cube.origin[j] + diff[j]);
+						particles[i].getVel()[j] *= -1.0f;
 					}
 
 					if (particles[i].getTranslate()[3][j] > cube.bound[j])
 					{
-						particles[i].setPos(j, cube.bound[j]);
-						particles[i].getVel()[j] *= -0.7;
+						glm::vec3 diff = glm::vec3(0.0f);
+						diff[j] = cube.origin[j] - particles[i].getPos()[j];
+						particles[i].setPos(j, cube.bound[j] + diff[j]);
+						particles[i].getVel()[j] *= -1.0f;
 					}
+
 				}
 			}
 
@@ -161,6 +176,9 @@ int main()
 		{
 			app.draw(particles[i].getMesh());
 		}
+
+		//render height marker
+		app.draw(m.getMesh());
 
 		app.display();
 	}
